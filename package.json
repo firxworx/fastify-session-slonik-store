@@ -1,0 +1,68 @@
+{
+  "name": "@firx/fastify-session-slonik-store",
+  "version": "0.1.0",
+  "description": "Slonik (postgres) session store for @mcgrea/fastify-session",
+  "author": "Kevin Firko <hello@firxworx.com>",
+  "repository": "github:firxworx/fastify-session-slonik-store",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=12"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "slonik",
+    "postgresql",
+    "postgres",
+    "fastify-session",
+    "fastify",
+    "session",
+    "auth"
+  ],
+  "scripts": {
+    "start": "pnpm run spec -- --watch",
+    "build": "tsup --entry src/index.ts --format cjs,esm --sourcemap --dts --clean --entry src/bin/cli.ts",
+    "lint": "eslint src/ test/",
+    "prettycheck": "pnpm prettier --check src/ test/",
+    "prettify": "pnpm prettier --write src/ test/",
+    "typecheck": "tsc --noEmit",
+    "spec": "DEBUG=fastify-session* vitest --run",
+    "test": "pnpm run lint && pnpm run prettycheck && pnpm run typecheck && pnpm run spec",
+    "prepublishOnly": "pnpm run build"
+  },
+  "dependencies": {
+    "debug": "^4.3.4"
+  },
+  "peerDependencies": {
+    "slonik": ">=34",
+    "zod": ">=3"
+  },
+  "devDependencies": {
+    "@mgcrea/eslint-config-node": "^0.8.1",
+    "@mgcrea/fastify-session": "^2.2.1",
+    "@prisma/client": "^5.2.0",
+    "@tsconfig/node-lts": "^18.12.5",
+    "@tsconfig/strictest": "^2.0.2",
+    "@types/debug": "^4.1.8",
+    "@types/node": "^20.6.0",
+    "eslint": "^8.49.0",
+    "prettier": "^3.0.3",
+    "prettier-plugin-organize-imports": "^3.2.3",
+    "prisma": "^5.2.0",
+    "tsup": "^7.2.0",
+    "tsx": "^3.12.8",
+    "typescript": "^5.2.2",
+    "vitest": "^0.34.4"
+  }
+}
