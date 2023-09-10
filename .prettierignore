@@ -1,0 +1,14 @@
+# Add files here to ignore them from prettier formatting
+# https://prettier.io/docs/en/ignore.html
+
+node_modules
+/.cache
+/dist
+/coverage
+/tmp
+/out
+/out-tsc
+cdk.out
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
