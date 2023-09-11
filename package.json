@@ -39,7 +39,16 @@
     "typecheck": "tsc --noEmit",
     "spec": "DEBUG=fastify-session* vitest --run",
     "test": "pnpm run lint && pnpm run prettycheck && pnpm run typecheck && pnpm run spec",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "pnpm run build",
+    "docker:up": "docker compose up -d && exit 0",
+    "docker:down": "docker compose down",
+    "docker:postgres:up": "docker compose up -d postgres && exit 0",
+    "docker:postgres:down": "docker compose down postgres",
+    "docker:postgres:cli": "docker exec -it pg bash && exit 0",
+    "setup:dev": "DOTENV_CONFIG_PATH=.env tsx --tsconfig scripts/tsconfig.json scripts/db-setup.ts",
+    "test:dev": "DOTENV_CONFIG_PATH=.env tsx --tsconfig scripts/tsconfig.json scripts/db-test.ts",
+    "kill:port": "bash -c 'pids=$(lsof -i :$0 | grep LISTEN | awk \"{print \\$2}\"); if [[ -z $pids ]]; then echo \"No process found running on port $0\"; else echo \"Killing: $pids\"; echo $pids | xargs kill; fi'",
+    "kill:vscode-server": "ps uxa | grep .vscode-server | awk '{print $2}' | xargs kill"
   },
   "dependencies": {
     "debug": "^4.3.4"
@@ -60,6 +69,8 @@
     "prettier": "^3.0.3",
     "prettier-plugin-organize-imports": "^3.2.3",
     "prisma": "^5.2.0",
+    "slonik-interceptor-field-name-transformation": "^1.6.5",
+    "slonik-sql-tag-raw": "^2.0.0",
     "tsup": "^7.2.0",
     "tsx": "^3.12.8",
     "typescript": "^5.2.2",
