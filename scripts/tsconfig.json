@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "strictNullChecks": true,
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "outDir": "../dist"
+  },
+  "include": ["*.ts"],
+  "exclude": ["node_modules"]
+}
