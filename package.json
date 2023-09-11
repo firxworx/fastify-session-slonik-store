@@ -1,9 +1,12 @@
 {
   "name": "@firx/fastify-session-slonik-store",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Slonik (postgres) session store for @mcgrea/fastify-session",
   "author": "Kevin Firko <hello@firxworx.com>",
-  "repository": "github:firxworx/fastify-session-slonik-store",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/firxworx/fastify-session-slonik-store.git"
+  },
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -11,6 +14,9 @@
       "require": "./dist/index.cjs",
       "import": "./dist/index.js"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -76,5 +82,12 @@
     "tsx": "^3.12.8",
     "typescript": "^5.2.2",
     "vitest": "^0.34.4"
+  },
+  "bugs": {
+    "url": "https://github.com/firxworx/fastify-session-slonik-store/issues"
+  },
+  "homepage": "https://github.com/firxworx/fastify-session-slonik-store#readme",
+  "directories": {
+    "test": "test"
   }
 }

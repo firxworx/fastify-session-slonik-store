@@ -1,4 +1,4 @@
-# fastify-session-slonik-store for @mgcrea/fastify-session
+# fastify-session-slonik-store
 
 <!-- markdownlint-disable MD033 -->
 <p align="center">
@@ -26,11 +26,11 @@
 
 ## Introduction
 
-[Slonik](https://github.com/gajus/slonik) session store for [fastify](https://github.com/fastify/fastify) and [@mgcrea/fastify-session](https://github.com/mgcrea/fastify-session).
+[Slonik](https://github.com/gajus/slonik) session store for [@mgcrea/fastify-session](https://github.com/mgcrea/fastify-session) and [fastify](https://github.com/fastify/fastify).
 
-Slonik is a stable and battle-proven postgres client that provides runtime and build-time type safety with minimal overhead and first-class support for zod via a _result parser interceptor_.
+Slonik is a stable and battle-proven client for [postgres](https://www.postgresql.org/), the powerful open-source relational database. Slonik provides runtime and build-time type safety with minimal overhead via first-class support for zod which can be enabled using a _result parser interceptor_.
 
-This package was first published 2023-09.
+This package was first published 2023-09-11.
 
 ### Features
 
@@ -38,8 +38,8 @@ This session store accepts your app's slonik `DatabasePool` as a configuration v
 
 - default (out-of-the-box) configuration with no _interceptors_ or _type parsers_ defined
 - _type parser_ configuration that may or may not parse `timestamptz` to `Date` or `string`
-- with and without a field name transformation _interceptor_ that renames lower snake_case (postgres convention) field names to camelCase (js convention) in query results
-- with and without a result parser _interceptor_ that parses query results vs. a zod schema when queried with `sql.type(...)`
+- with and without a _field name transformation interceptor_ that renames lower snake_case (postgres convention) field names to camelCase (js convention) in query results
+- with and without a _result parser interceptor_ that parses query results vs. a zod schema when queried with `sql.type(...)`
 
 ### Requires
 
