@@ -1,4 +1,4 @@
-# FastifySession PrismaStore
+# fastify-session-slonik-store for @mgcrea/fastify-session
 
 <!-- markdownlint-disable MD033 -->
 <p align="center">
@@ -30,6 +30,10 @@
 
 Slonik is a stable and battle-proven postgres client that provides runtime and build-time type safety with minimal overhead and first-class support for zod via a _result parser interceptor_.
 
+This package was first published 2023-09.
+
+### Features
+
 This session store accepts your app's slonik `DatabasePool` as a configuration value. It is tested to work with different variations of slonik `ClientConfiguration` properties including:
 
 - default (out-of-the-box) configuration with no _interceptors_ or _type parsers_ defined
@@ -43,7 +47,7 @@ This session store accepts your app's slonik `DatabasePool` as a configuration v
 - [@fastify/cookie](https://github.com/fastify/fastify-cookie) for cookie parsing and serialization
 - [slonik](https://github.com/gajus/slonik) for postgres connectivity and query execution
 
-### Details:
+### Details
 
 Written in [TypeScript](https://www.typescriptlang.org/) for static type checking and types exported along with the library.
 
@@ -61,9 +65,9 @@ Advantages can include:
 - leveraging an existing dependency (postgres) can reduce complexity of an application and its infrastructure for better maintainability and simplified deployments
 - eliminating the need for an additional service for session storage can help reduce hosting/infrastructure costs
 
-Ensure that your current architecture and infrastructure is ready to support postgres as a session store and that this option can meet the performance and load/capacity needs of your project.
+Ensure that your current architecture and infrastructure is ready to support postgres as a session store and that this option can meet the performance and capacity requirements of your project.
 
-In high-volume production applications and/or situations where a performance or latency requirement is emphasized, solutions such as redis, stateless sessions (e.g. JWT), or encrypted cookie sessions may be superior options vs. postgres depending on your specific requirements.
+In high-volume production applications and/or situations that emphasize a performance or latency requirement, solutions such as redis, stateless sessions (e.g. JWT), or encrypted cookie sessions may be superior options vs. postgres depending on your specific requirements.
 
 That said, certain performance concerns related to using postgres can be addressed by using a caching proxy or caching layer for session data. It can also be important to ensure that your database and application servers are located in the same datacenter or region to minimize latency of any queries.
 
@@ -268,6 +272,31 @@ If a user is authenticated your API can respond with success and return session/
 
 Your front-end app should not need to know the session ID or any secret values. It only needs to know if the user is authenticated or not.
 
+## Developer Notes
+
+The scripts in `package.json` include a few conveniences for dev and testing: 
+
+- `pnpm docker:postgres:up` starts the postgres container (named 'pg') on port 5432
+- `pnpm docker:postgres:down` stops the postgres container
+- `pnpm docker:postgres:cli` open a bash shell on the postgres container (it must be started first)
+  - run `psql -U postgres` to connect to the postgres server from the container's bash shell
+
+Refer to `docker-compose.yml` for the postgres container configuration.
+
+Run `pnpm setup:dev` to run the databsae script in `scripts/db-setup.ts` to execute the queries in `database/functions.sql` and `database/schema.sql` on the running postgres container.
+
+The database setup script must be run before running the tests.
+
+The script assumes the connection URL is `postgres://postgres:postgres@localhost:5432/postgres` however this can be overridden by setting the `DATABASE_URL` environment variable when running the script (note the `.env` file is not read).
+
+The test strategy for this package uses a real postgres database and real slonik `DatabasePool` instance. This is similar to other session store packages in the fastify-session ecosystem.
+
+Run tests: `pnpm spec`. 
+
+Run tests in watch mode: `pnpm vitest --runInBand --watch`.
+
+Run full lint/pretty/typecheck and tests as run by CI: `pnpm test`.
+
 ## Authors
 
 - [Kevin Firko](https://github.com/firxworx) <hello@firxworx.com>
@@ -281,7 +310,7 @@ Your front-end app should not need to know the session ID or any secret values. 
 ```txt
 The MIT License
 
-Copyright (c) 2023 Kevin Firko <hello@firxworx.com>
+Copyright (c) 2023 Kevin Firko <hello@firxworx.com> (@firxworx on GitHub)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
