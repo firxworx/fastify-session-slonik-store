@@ -94,6 +94,7 @@ describe('SlonikPgSessionStore', () => {
       expect(sessionData?.data).toEqual(TEST_DATA)
       expect(sessionData?.expiresAt).toBeInstanceOf(Date)
       expect(sessionData?.expiresAt?.getTime()).toBeLessThan(laterTtlMs)
+      expect(sessionData?.expiresAt?.getUTCFullYear()).toEqual(new Date(laterTtlMs).getUTCFullYear())
     }
   })
 
@@ -132,7 +133,7 @@ describe('SlonikPgSessionStore', () => {
       const sessionData = result?.[0]
       const expiry = result?.[1]
 
-      // ensure tuple is returned
+      // ensure tuple of length 2 is returned
       expect(Array.isArray(result) && result.length === 2).toBeTruthy()
 
       // ensure session data is correct and expiry ttl checks out
@@ -209,6 +210,12 @@ describe('SlonikPgSessionStore', () => {
   })
 })
 
+/**
+ * Normalize the query result to the camelCase version so the tests are agnostic to the slonik pool configuration.
+ *
+ * The functionality is similar to `mapUniversalSessionResult()` of the `SlonikPgSessionStore` class however this
+ * version is more comprehensive and includes the `createdAt` and `updatedAt` fields as well as `expiredAt`.
+ */
 export function mapAndParseRawSlonikSessionResult(
   input: z.infer<typeof zRawSlonikAuthSessionQueryResult>,
 ): AuthSession {
@@ -228,7 +235,8 @@ export function mapAndParseRawSlonikSessionResult(
     return zAuthSession.parse(mapped)
   }
 
-  throw new Error('This should not be')
+  console.error('Unexpected input in test helper mapAndParseRawSlonikSessionResult: ', JSON.stringify(input, null, 2))
+  throw new Error('Encountered unexpected case in test helper')
 }
 
 /**
@@ -242,30 +250,33 @@ export function mapAndParseRawSlonikSessionResult(
  *
  * To understand the code it is important to note that slonik `sql.type()` will NOT actually parse a result with
  * zod if a given slonik pool is not configured for it. Therefore the type of the query result when using `sql.type()`
- * will be incorrect at runtime in this case.
+ * may be incorrect at runtime in this case.
+ *
+ * The following uses `zRawSlonikAuthSessionQueryResult` which is clear that the result may be either `AuthSession`
+ * or `RawAuthSession` (i.e. with `expiresAt` camelCase or `expires_at` snake_case).
  *
  * @returns `AuthSession` or `null` if no session is found
  */
 async function findSessionBySid(pool: DatabasePool, sid: string): Promise<AuthSession | null> {
   const result = await pool.connect(async (connection) => {
     const tableIdentifer = DEFAULT_SESSION_TABLE_IDENTIFIER_TOKEN
+
+    // build sql columns list with field names converted to lower_snake_case per common postgres convention
     const resultDtoSqlColumns: ListSqlToken = buildSqlColumnsList(zAuthSession)
 
-    // the resulting type from this WILL BE WRONG if slonik is not configured to parse the result
-    const query = sql.type(zAuthSession)`
+    // the resulting type from sql.type() is not enforced at runtime if slonik is not configured to parse the result
+    const query = sql.type(zRawSlonikAuthSessionQueryResult)`
       SELECT ${resultDtoSqlColumns} FROM ${tableIdentifer} WHERE sid = ${sid};
     `
 
-    // transform the result to handle if slonik is not configured to convert snake_case to camelCase
     const rawResult = await connection.maybeOne(query)
 
     if (!rawResult) {
       return null
     }
 
-    // map and run parse again manually in case slonik is not configured for parsing
-    const result = mapAndParseRawSlonikSessionResult(rawResult)
-    return result
+    // manually map in case slonik is not configured for parsing the result (this will parse with zAuthSession)
+    return mapAndParseRawSlonikSessionResult(rawResult)
   })
 
   return result

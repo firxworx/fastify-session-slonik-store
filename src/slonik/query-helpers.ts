@@ -8,6 +8,8 @@ import type { ZodObjectKeys } from '../types/zod.type-utils'
 
 /**
  * Convert a camelCase string to lower_snake_case.
+ *
+ * Be mindful of corner cases with case conversions e.g. such as with acronyms.
  */
 export function camelToSnake(input = ''): string {
   return input.replace(/[A-Z]+/g, (match) => `_${match.toLowerCase()}`).replace(/^_/, '')
@@ -19,8 +21,8 @@ export function camelToSnake(input = ''): string {
  *
  * These are typically used to express table names, column names, and other identifiers within an SQL query.
  *
- * This helper normalizes identifiers and ensures that they are appropriately wrapped in double quotes and that
- * code is protected from SQL injection attacks.
+ * This helper normalizes identifiers and slonik's `sql.identifier()` ensures that they are appropriately wrapped
+ * in double quotes and that code is protected from SQL injection attacks.
  *
  * It accepts varying input types as a convenience when building queries or writing functions that build queries
  * e.g. 'user', ['public', 'user'], or sql.identifier(['public', 'user']).
@@ -33,8 +35,10 @@ export function getSlonikIdentifierSqlToken(input: string | string[] | Identifie
  * Return a slonik `IdentifierSqlToken` for use in slonik-powered SQL queries given a string, string array, or
  * `IdentifierSqlToken`.
  *
- * Similar to `getSlonikIdentifierSqlToken()` except this function converts camelCase identifiers found in
- * `string` and `string[]` input to snake_case identifiers per project convention.
+ * This function is similar to `getSlonikIdentifierSqlToken()` except this function converts camelCase identifiers
+ * found in `string` and `string[]` input to snake_case identifiers per project convention.
+ *
+ * Be mindful of corner cases with case conversions e.g. such as with acronyms.
  *
  * Input that is already an `IdentifierSqlToken` is returned as-is.
  *
@@ -64,7 +68,10 @@ export function getNormalizedSlonikIdentifierSqlToken(
  * as a `ListSqlToken`.
  *
  * This function will convert camelCase field names to snake_case column names per project convention to
- * use snake_case within the database and camelCase within JS/TS.
+ * support the use of snake_case within the database (per common postgres conventions) and camelCase
+ * within JS/TS.
+ *
+ * Be mindful of corner cases with case conversions e.g. such as with acronyms.
  */
 export function buildSqlColumnsList<T extends z.ZodObject<z.ZodRawShape>>(zodModelSchema: T): ListSqlToken {
   const fields: ZodObjectKeys<T>[] = Object.keys(zodModelSchema.shape).map(camelToSnake)

@@ -4,7 +4,8 @@ import type { DatabasePool, IdentifierSqlToken } from 'slonik'
 import { z } from 'zod'
 import { getSlonikIdentifierSqlToken } from './slonik/query-helpers'
 import { sql } from './slonik/sql-tag'
-import { zJson, zJsonObject } from './zod-schemas/z-json'
+import { zJson } from './zod-schemas/z-json' // zJsonObject
+import { zSessionStoreGetValue, zSessionStoreGetValueUniversal } from './zod-schemas/z-session'
 
 // import createDebug from 'debug'
 // export const debug = createDebug('slonik-pg-session-store')
@@ -18,14 +19,6 @@ export type SlonikPgSessionStoreOptions = {
   // createTable?: boolean
 }
 
-// inspo from PrismaStore --
-// export type ExtraCreateInput<T extends SessionData = SessionData> = (data: T) => Partial<Prisma.SessionCreateInput>
-// export type PrismaStoreOptions<T extends SessionData> = {
-//   prisma: PrismaClient
-//   ttl?: number
-//   extra?: ExtraCreateInput<T>
-// }
-
 export const DEFAULT_SESSION_TTL_SECONDS = 864e2 // one day
 
 export const DEFAULT_SESSION_TABLE_SCHEMA = 'public'
@@ -36,23 +29,16 @@ export const DEFAULT_SESSION_TABLE_IDENTIFIER_TOKEN: IdentifierSqlToken = getSlo
   DEFAULT_SESSION_TABLE_NAME,
 ])
 
-export const zSessionGetValue = z.object({ data: zJsonObject.nullable(), expiresAt: z.coerce.date().nullable() })
-
-export const zSessionGetUniversalValue = z.object({
-  data: zJsonObject.nullable(),
-  expiresAt: z.coerce.date().nullable().optional(),
-  expires_at: z.coerce.date().nullable().optional(),
-})
-
-export const zSessionManyValue = z.object({ sid: z.string(), data: zJsonObject }) // refactor to pick from central type
-
-// make a mapper for snake_case <-> camelCase so this class can be agnostic to the slonik configuration
-export function mapUniversalSessionResult(
-  input: z.infer<typeof zSessionGetUniversalValue>,
-): z.infer<typeof zSessionGetValue> {
+/**
+ * Map the "universal" session result where fields can be either snake_case or camelCase (depending on slonik pool
+ * configuration) to the normalized version with camelCase fields.
+ */
+function mapUniversalSessionResult(
+  input: z.infer<typeof zSessionStoreGetValueUniversal>,
+): z.infer<typeof zSessionStoreGetValue> {
   return {
     data: input.data,
-    expiresAt: input.expiresAt || input.expires_at || null,
+    expiresAt: 'expiresAt' in input ? input.expiresAt : 'expires_at' in input ? input.expires_at : null,
   }
 }
 
@@ -70,14 +56,14 @@ export class SlonikPgSessionStore<T extends SessionData = SessionData> extends E
   readonly ttlSeconds: number
   readonly tableIdentifier: IdentifierSqlToken
 
-  // mgcrea's PrismaStore adds an `extra` option that is not implemented here
+  // @future mgcrea's PrismaStore adds an `extra` option that is not implemented here
   // readonly #extra: ExtraCreateInput<T> | undefined
 
-  // interesting to note the following example session store adds a 'prefix' option (see `KnexStore`)
+  // it is interesting to note the following session store example adds a 'prefix' option (refer to `KnexStore`)
   // https://github.com/chriswk/fastify-session-knex-store
 
-  // this store does not implement a `createTable` option however that might be a good idea for future
-  // as this is a common feature seen in other session stores
+  // @future this store does not implement a `createTable` option
+  // this may be a good idea for future as this is a common feature seen in other session stores
 
   constructor({
     pool,
@@ -118,7 +104,8 @@ export class SlonikPgSessionStore<T extends SessionData = SessionData> extends E
    */
   async get(sessionId: string): Promise<[T, number | null] | null> {
     const result: [T, number | null] | null = await this.pool.connect(async (connection) => {
-      const query = sql.type(zSessionGetUniversalValue)`
+      // universal value could have either expires_at or expiresAt (depends on table schema + pool configuration)
+      const query = sql.type(zSessionStoreGetValueUniversal)`
         SELECT "data", "expires_at"
         FROM ${this.tableIdentifier}
         WHERE "sid" = ${sessionId};
@@ -130,10 +117,10 @@ export class SlonikPgSessionStore<T extends SessionData = SessionData> extends E
         return null
       }
 
-      // transform to make agnostic to the slonik pool configuration (possible field name transformation interceptor)
+      // normalize the universal value to required version with expiresAt property
       const mappedResult = mapUniversalSessionResult(result)
 
-      // assume the slonik `typeParsers` configuration is compatible with the `Date` constructor
+      // assume the slonik `typeParsers` output for timestamptz is compatible with the `Date` constructor
       return [result.data as T, mappedResult?.expiresAt ? new Date(mappedResult.expiresAt).getTime() : null]
     })
 
