@@ -1,46 +1,81 @@
 import { createTypeParserPreset, type ClientConfiguration } from 'slonik'
-import { sql } from '../../src/slonik/sql-tag'
+import { createFieldNameTransformationInterceptor } from 'slonik-interceptor-field-name-transformation'
+import { createZodResultParserInterceptor } from './slonik-zod-result-parser-interceptor'
+import { afterPoolConnectionConfig } from './slonik-after-pool-connection-schema'
 
-export const DEFAULT_SLONIK_POOL_CONFIG: Partial<ClientConfiguration> = {
+/*
+ * Note: slonik may warn "unsupportedOptions":{"schema":"public"}}" (unsupported DSN parameter) unless the
+ * database has "public" schema created subject to various conditions. This is mitigated by creating
+ * the schema if it does not exist and setting the search_path to public.
+ *
+ * It is recommended to always clarify the schema in any queries with postgres to avoid ambiguity.
+ *
+ * @see https://www.postgresonline.com/article_pfriendly/279.html for nuances regarding search_path
+ */
+
+/**
+ * Minimal slonik pool config for testing.
+ */
+export const BASIC_SLONIK_POOL_CONFIG: Partial<ClientConfiguration> = {
   captureStackTrace: true,
   connectionTimeout: 10000,
   idleTimeout: 10000,
-
-  // @see reference - https://github.com/ViacomInc/openap-inventory-manager/blob/399bc6a09d7a77ecb0c17d5263e54401cc9d4e51/src/db/config.ts
+  maximumPoolSize: 2,
   interceptors: [
     {
-      // slonik may warn "unsupportedOptions":{"schema":"public"}}" (unsupported DSN parameter)
-      // the default schema can be enforced via the following query which executes after each connection is established
-      afterPoolConnection: async (_connectionContext, connection) => {
-        // @see https://www.postgresonline.com/article_pfriendly/279.html for nuances regarding search_path
-        await connection.query(sql.typeAlias('null')`
-          CREATE SCHEMA IF NOT EXISTS public;
-          SET search_path TO public;
-
-          SET TIME ZONE 'UTC';
-        `)
-
-        return null
-      },
+      afterPoolConnection: afterPoolConnectionConfig,
     },
-    // createFieldNameTransformationInterceptor({
-    //   format: 'CAMEL_CASE',
-    // }),
     // createResultParserInterceptor(),
     // createQueryLoggingInterceptor(),
+    // ...etc...
   ],
-  // @todo need to verify these ok if we don't use date + play nice with other interceptors
+}
+
+/**
+ * Minimal slonik pool config for testing using the out-of-the-box type parser presets provided by
+ * `createTypeParserPreset()` exported by slonik.
+ */
+export const PRESET_SLONIK_POOL_CONFIG: Partial<ClientConfiguration> = {
+  captureStackTrace: true,
+  connectionTimeout: 10000,
+  idleTimeout: 10000,
+  maximumPoolSize: 2,
+  interceptors: [
+    {
+      afterPoolConnection: afterPoolConnectionConfig,
+    },
+    // createResultParserInterceptor(),
+    // createQueryLoggingInterceptor(),
+    // ...etc...
+  ],
+  typeParsers: [...createTypeParserPreset()],
+}
+
+/**
+ * Typical slonik pool config for testing: uses the out-of-the-box `createTypeParserPreset()` configuration
+ * for type parsing with custom overrides for `json`, `timestamp`, and `timestamptz` field types to return the
+ * unmodified raw value.
+ *
+ * @see https://github.com/gajus/slonik/blob/main/.README/USAGE.md
+ */
+export const COMMON_SLONIK_POOL_CONFIG: Partial<ClientConfiguration> = {
+  captureStackTrace: true,
+  connectionTimeout: 10000,
+  idleTimeout: 10000,
+  maximumPoolSize: 2,
+  interceptors: [
+    {
+      afterPoolConnection: afterPoolConnectionConfig,
+    },
+  ],
+  // override slonik default behaviour of parsing ISO timestamp and timestamptz field types to string
+  // otherwise slonik converts to js timestamp (milliseconds)
   typeParsers: [
     ...createTypeParserPreset(),
     {
       name: 'json',
-      parse: (value: string): string => value,
+      parse: (value: string | null): string | null => value,
     },
-    // {
-
-    // },
-    // override slonik default behaviour and parse ISO timestamp and timestamptz field types to string
-    // otherwise slonik converts to js timestamp (milliseconds)
     {
       name: 'timestamp',
       parse: (value: string | null): string | null => value,
@@ -49,10 +84,38 @@ export const DEFAULT_SLONIK_POOL_CONFIG: Partial<ClientConfiguration> = {
       name: 'timestamptz',
       parse: (value: string | null): string | null => value,
     },
-    // example of the default node-pg behaviour to parse timestamptz to Date
-    // {
-    //   name: 'timestamptz',
-    //   parse: (str) => new Date(str),
-    // },
+  ],
+}
+
+/**
+ * Typical slonik pool config with the following features:
+ *
+ * - `slonik-interceptor-field-name-transformation` to convert snake_case to camelCase in query results
+ * - adds result parser interceptor for automatic zod schema validation when using `sql.type(...)`
+ * - out-of-the-box `createTypeParserPreset()` configuration for type parsing with an override that explicitly
+ *   converts `timestamptz` field types to `Date` objects using the `Date` constructor
+ *
+ * @see https://github.com/gajus/slonik/blob/main/.README/USAGE.md
+ */
+export const TRANSFORM_SLONIK_POOL_CONFIG: Partial<ClientConfiguration> = {
+  captureStackTrace: true,
+  connectionTimeout: 10000,
+  idleTimeout: 10000,
+  maximumPoolSize: 2,
+  interceptors: [
+    {
+      afterPoolConnection: afterPoolConnectionConfig,
+    },
+    createFieldNameTransformationInterceptor({
+      format: 'CAMEL_CASE',
+    }),
+    createZodResultParserInterceptor(),
+  ],
+  typeParsers: [
+    ...createTypeParserPreset(),
+    {
+      name: 'timestamptz',
+      parse: (str) => new Date(str),
+    },
   ],
 }
