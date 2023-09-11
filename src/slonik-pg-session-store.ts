@@ -36,8 +36,25 @@ export const DEFAULT_SESSION_TABLE_IDENTIFIER_TOKEN: IdentifierSqlToken = getSlo
   DEFAULT_SESSION_TABLE_NAME,
 ])
 
-export const zSessionGetValue = z.object({ data: zJsonObject, expiresAt: z.coerce.date().nullable() })
+export const zSessionGetValue = z.object({ data: zJsonObject.nullable(), expiresAt: z.coerce.date().nullable() })
+
+export const zSessionGetUniversalValue = z.object({
+  data: zJsonObject.nullable(),
+  expiresAt: z.coerce.date().nullable().optional(),
+  expires_at: z.coerce.date().nullable().optional(),
+})
+
 export const zSessionManyValue = z.object({ sid: z.string(), data: zJsonObject }) // refactor to pick from central type
+
+// make a mapper for snake_case <-> camelCase so this class can be agnostic to the slonik configuration
+export function mapUniversalSessionResult(
+  input: z.infer<typeof zSessionGetUniversalValue>,
+): z.infer<typeof zSessionGetValue> {
+  return {
+    data: input.data,
+    expiresAt: input.expiresAt || input.expires_at || null,
+  }
+}
 
 /**
  * Slonik-powered postgres session store for `@mgcrea/fastify-session`.
@@ -79,6 +96,11 @@ export class SlonikPgSessionStore<T extends SessionData = SessionData> extends E
    * if the argument is not provided.
    */
   private getExpiresAtDate(expiresAtJsTimetamp?: number | null): Date {
+    if (expiresAtJsTimetamp && typeof expiresAtJsTimetamp !== 'number') {
+      console.error('invalid timestamp ', expiresAtJsTimetamp)
+      throw new Error('session store received invalid js timestamp')
+    }
+
     return new Date(expiresAtJsTimetamp ?? Date.now() + this.ttlSeconds * 1000)
   }
 
@@ -96,7 +118,7 @@ export class SlonikPgSessionStore<T extends SessionData = SessionData> extends E
    */
   async get(sessionId: string): Promise<[T, number | null] | null> {
     const result: [T, number | null] | null = await this.pool.connect(async (connection) => {
-      const query = sql.type(zSessionGetValue)`
+      const query = sql.type(zSessionGetUniversalValue)`
         SELECT "data", "expires_at"
         FROM ${this.tableIdentifier}
         WHERE "sid" = ${sessionId};
@@ -108,8 +130,11 @@ export class SlonikPgSessionStore<T extends SessionData = SessionData> extends E
         return null
       }
 
+      // transform to make agnostic to the slonik pool configuration (possible field name transformation interceptor)
+      const mappedResult = mapUniversalSessionResult(result)
+
       // assume the slonik `typeParsers` configuration is compatible with the `Date` constructor
-      return [result.data as T, result?.expiresAt ? new Date(result.expiresAt).getTime() : null]
+      return [result.data as T, mappedResult?.expiresAt ? new Date(mappedResult.expiresAt).getTime() : null]
     })
 
     return result
