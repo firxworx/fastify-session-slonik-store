@@ -1,0 +1,45 @@
+version: '3.8'
+
+# list running containers:
+# docker ps
+#
+# list the postgres container named 'pg':
+# docker ps -f "name=pg"
+
+# host_port:container_port
+
+services:
+  postgres:
+    container_name: pg
+    image: 'postgres:15.4'
+    environment:
+      TZ: UTC
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /var/lib/postgresql/data
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: '0.50'
+
+    # `volumes` entrypoint will only run if data directory is empty (https://hub.docker.com/_/postgres/)
+    # ./db/initdb.d:/docker-entrypoint-initdb.d
+
+  # adminer:
+  #   image: adminer
+  #   restart: always
+  #   ports:
+  #       - 8080:8080
+
+# persist data across container restarts
+volumes:
+  pg-data:
+
+networks:
+  app_network:
