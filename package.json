@@ -1,6 +1,6 @@
 {
   "name": "@firx/fastify-session-slonik-store",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Slonik (postgres) session store for @mcgrea/fastify-session",
   "author": "Kevin Firko <hello@firxworx.com>",
   "repository": {
