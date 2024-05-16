@@ -244,33 +244,64 @@ export const buildFastify = (options?: FastifyServerOptions): FastifyInstance =>
 
 ### CORS
 
-Your API may require a CORS configuration that includes `credentials: true` to allow users' browsers to send cookies with cross-origin requests.
+Your API will require a CORS configuration that includes `credentials: true` if you need to allow users' browsers to send cookies with cross-origin requests.
 
-Refer to the documentation for `@fastify/cors` to set up CORS in your project.
+Refer to the [@fastify/cors documentation](https://github.com/fastify/fastify-cors) for full documentation.
+
+A quickstart example:
+
+```ts
+import cors from '@fastify/cors'
+
+// ...
+
+fastify.register(cors, {
+  origin: ENV.CORS_ORIGIN, // string or array with the origin(s) of your front-end application(s)
+  credentials: true,
+})
+```
+
+Valid CORS origins must include the protocol and port if using a non-standard port for the given protocol. A common origin for local development is: `http://localhost:3000` and an example for production is: `https://example.com`.
 
 ### Additional Security
 
-Ensure that you use SSL/TLS in production environments or in any environment where sensitive data is being transmitted.
+Use SSL/TLS in production environments or any environment where sensitive data is being transmitted.
 
-Consider adding the `@mgcrea/fastify-session-sodium-crypto` package to sign or encrypt your session data.
+Consider adding the [@mgcrea/fastify-session-sodium-crypto](https://github.com/mgcrea/fastify-session-sodium-crypto) package to sign or encrypt your session data.
 
 ### Client-Side Implications of HTTP-Only Cookies
 
-Using an `httpOnly` cookie is a recommended security practice to help mitigate the risk of XSS attacks.
+Using `httpOnly` cookies for sessions is a recommended security practice to help mitigate the risk of XSS attacks.
 
-Users' browsers will automatically send the cookie along with any requests it makes to your API subject to the cookie's `domain`, `path`, etc. properties.
+A web browser will automatically send cookies along with any requests it makes to your API subject to:
+
+- the cookie's properties including `domain`, `path`, expiry, etc;
+- CORS configuration with acceptable origin and credentials headers; and
+- the request having the `credentials` option set to 'include' or the more secure 'same-origin'
 
 An HTTP-Only cookie cannot be accessed by client-side JavaScript. If JavaScript can't read a value like a session ID or access token then it can't be used by an attacker to steal or hijack it either.
 
-Commonly-seen yet naive approaches to authentication such as reading and storing a session ID in `localStorage` or `sessionStorage` to then add to requests are not possible when using an `httpOnly` cookie.
+The following is an example of a `fetch()` request configured to include cookie credentials:
 
-To provide user/session data to your client side code you can use server-side rendering techniques and/or employ a technique such as an `/auth/session` endpoint that returns either an authenticated user's session data or an error.
+```ts
+const response = await fetch(`${API_BASE_URL}/auth/session`, {
+  method: 'GET',
+  credentials: 'include', // include cookies with the request
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+```
 
-In a pure client-side contexts such as an SPA like a React app, you can "ping" a session endpoint with a request when the app loads. You can also optionally "ping" it on a regular interval as long as the last response was successful.
+Commonly-seen yet naive approaches such as reading and storing an access tokens or session IDs in `localStorage` or `sessionStorage` to then include in requests are not possible when using an `httpOnly` cookie.
+
+To provide user/session data to your client side code you can use server-side rendering techniques and/or employ a technique such as an `/auth/session` endpoint that returns either an authenticated user's session data or an error response.
+
+In a pure client-side contexts such as an SPA (e.g. React app), you can "ping" a session endpoint with a request when the app loads. You can also optionally "ping" it on a spaced-out interval if the last response was successful.
 
 If a user is authenticated your API can respond with success and return session/profile data in the response body. If a user is not authenticated then your API can respond with an error and return a 401 status code. Your client application can then handle each case and render the appropriate UI.
 
-Your front-end app should not need to know the session ID or any secret values. It only needs to know if the user is authenticated or not.
+Your front-end app should not need to know the session ID or any secret values.
 
 ## Developer Notes
 
@@ -293,7 +324,7 @@ The test strategy for this package uses a real postgres database and real slonik
 
 Run tests: `pnpm spec`. 
 
-Run tests in watch mode: `pnpm vitest --runInBand --watch`.
+Run tests in watch mode: `pnpm vitest --watch`.
 
 Run full lint/pretty/typecheck and tests as run by CI: `pnpm test`.
 
